@@ -34,32 +34,32 @@ function buildTheme(mode: "dark" | "light"): ThemeOptions {
     },
     spacing: 8,
     typography: {
-      fontFamily: "var(--font-inter), system-ui, sans-serif",
+      fontFamily: "var(--font-inter), var(--font-thai-sans), system-ui, sans-serif",
       h1: {
-        fontFamily: "var(--font-playfair), serif",
+        fontFamily: "var(--font-playfair), var(--font-thai-serif), serif",
         fontWeight: 600,
         letterSpacing: "-0.02em",
       },
       h2: {
-        fontFamily: "var(--font-playfair), serif",
+        fontFamily: "var(--font-playfair), var(--font-thai-serif), serif",
         fontWeight: 600,
         letterSpacing: "-0.02em",
       },
       h3: {
-        fontFamily: "var(--font-playfair), serif",
+        fontFamily: "var(--font-playfair), var(--font-thai-serif), serif",
         fontWeight: 600,
         letterSpacing: "-0.01em",
       },
       h4: {
-        fontFamily: "var(--font-playfair), serif",
+        fontFamily: "var(--font-playfair), var(--font-thai-serif), serif",
         fontWeight: 500,
       },
       h5: {
-        fontFamily: "var(--font-playfair), serif",
+        fontFamily: "var(--font-playfair), var(--font-thai-serif), serif",
         fontWeight: 500,
       },
       h6: {
-        fontFamily: "var(--font-inter), sans-serif",
+        fontFamily: "var(--font-inter), var(--font-thai-sans), sans-serif",
         fontWeight: 600,
       },
       button: {

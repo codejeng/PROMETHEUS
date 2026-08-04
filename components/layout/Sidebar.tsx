@@ -22,6 +22,7 @@ import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useSyncStore } from "@/store/useSyncStore";
 import { useLocaleStore } from "@/store/useLocaleStore";
+import { useProfileStore } from "@/store/useProfileStore";
 import { useT } from "@/hooks/useT";
 
 const nav = [
@@ -47,7 +48,13 @@ export function Sidebar() {
   const syncStatus = useSyncStore((s) => s.status);
   const locale = useLocaleStore((s) => s.locale);
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
+  const profile = useProfileStore((s) => s.profile);
   const t = useT("nav");
+
+  const displayName = profile.name.trim()
+    ? [profile.prefix.trim(), profile.name.trim()].filter(Boolean).join(" ")
+    : t("researcher");
+  const avatarInitial = profile.name.trim()[0]?.toUpperCase() ?? "R";
 
   return (
     <Box
@@ -129,12 +136,15 @@ export function Sidebar() {
               "&:hover": { bgcolor: "action.hover", color: "text.primary" },
             }}
           >
-            <Avatar sx={{ width: 28, height: 28, fontSize: "0.8rem", bgcolor: "primary.main", color: "primary.contrastText" }}>
-              R
+            <Avatar
+              src={profile.avatarUrl || undefined}
+              sx={{ width: 28, height: 28, fontSize: "0.8rem", bgcolor: "primary.main", color: "primary.contrastText" }}
+            >
+              {!profile.avatarUrl && avatarInitial}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="body2" noWrap sx={{ fontSize: "0.82rem", fontWeight: 500 }}>
-                {t("researcher")}
+                {displayName}
               </Typography>
               <Stack direction="row" alignItems="center" gap={0.5}>
                 <FiberManualRecordIcon

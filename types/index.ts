@@ -13,6 +13,15 @@ export interface BaseEntity {
   updatedAt: ISODate;
 }
 
+// ---------- Profile ----------
+
+export interface Profile {
+  prefix: string;
+  name: string;
+  avatarUrl: string;
+  updatedAt: ISODate;
+}
+
 // ---------- Vision ----------
 
 export interface Vision {

@@ -35,7 +35,7 @@ a {
 .markdown-body h1,
 .markdown-body h2,
 .markdown-body h3 {
-  font-family: var(--font-playfair), serif;
+  font-family: var(--font-playfair), var(--font-thai-serif), serif;
   margin-top: 1.2em;
   margin-bottom: 0.5em;
 }

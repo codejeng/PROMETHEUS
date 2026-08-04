@@ -184,6 +184,15 @@ create table if not exists sop_versions (
   content jsonb not null
 );
 
+-- ---------- Profile (single row, singleton) ----------
+create table if not exists profile (
+  id boolean primary key default true check (id),
+  updated_at timestamptz not null default now(),
+  prefix text not null default '',
+  name text not null default '',
+  avatar_url text not null default ''
+);
+
 -- ---------- Knowledge Graph ----------
 create table if not exists graph_nodes (
   id text primary key,
@@ -201,10 +210,11 @@ create table if not exists graph_edges (
   type text not null
 );
 
--- Singleton seed rows for vision/sop_document so an UPDATE always has a
--- row to target (the app never INSERTs into these two tables).
+-- Singleton seed rows so an UPDATE always has a row to target (the app
+-- never INSERTs into these tables).
 insert into vision (id) values (true) on conflict (id) do nothing;
 insert into sop_document (id) values (true) on conflict (id) do nothing;
+insert into profile (id) values (true) on conflict (id) do nothing;
 
 -- Tables created via the Table Editor UI are auto-granted to `anon` and
 -- `authenticated`; tables created via raw SQL (like this file) are not —
@@ -213,7 +223,7 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on
   problems, research_questions, papers, projects, labs, scholarships,
   timeline_milestones, journal_entries, vision, sop_document, sop_versions,
-  graph_nodes, graph_edges
+  graph_nodes, graph_edges, profile
   to anon, authenticated;
 
 -- Single-user app, no auth: rather than disabling RLS outright (which
@@ -229,7 +239,7 @@ begin
   foreach t in array array[
     'problems', 'research_questions', 'papers', 'projects', 'labs',
     'scholarships', 'timeline_milestones', 'journal_entries', 'vision',
-    'sop_document', 'sop_versions', 'graph_nodes', 'graph_edges'
+    'sop_document', 'sop_versions', 'graph_nodes', 'graph_edges', 'profile'
   ]
   loop
     execute format('alter table %I enable row level security', t);
@@ -240,3 +250,17 @@ begin
     );
   end loop;
 end $$;
+
+-- ---------- Storage: profile avatar uploads ----------
+-- Public bucket (readable without auth, since profile photos are shown in
+-- the sidebar on every page) with the same "single-user, no auth" full
+-- access policy used for the tables above.
+insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do nothing;
+
+drop policy if exists "avatars_public_access" on storage.objects;
+create policy "avatars_public_access" on storage.objects
+  for all to anon, authenticated
+  using (bucket_id = 'avatars')
+  with check (bucket_id = 'avatars');

@@ -18,6 +18,7 @@ import {
   InputAdornment,
   IconButton,
   Autocomplete,
+  Avatar,
 } from "@mui/material";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
@@ -27,10 +28,12 @@ import VpnKeyOutlinedIcon from "@mui/icons-material/VpnKeyOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { useThemeStore } from "@/store/useThemeStore";
 import { useLocaleStore } from "@/store/useLocaleStore";
 import { useAIStore } from "@/store/useAIStore";
+import { useProfileStore } from "@/store/useProfileStore";
 import { downloadExport, importData } from "@/lib/exportImport";
 import { suggestedModels } from "@/lib/ai/modelCatalog";
 import { useT } from "@/hooks/useT";
@@ -47,6 +50,25 @@ export function SettingsPage() {
   const locale = useLocaleStore((s) => s.locale);
   const setLocale = useLocaleStore((s) => s.setLocale);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const profile = useProfileStore((s) => s.profile);
+  const updateProfile = useProfileStore((s) => s.update);
+  const uploadAvatar = useProfileStore((s) => s.uploadAvatar);
+  const removeAvatar = useProfileStore((s) => s.removeAvatar);
+  const uploadingAvatar = useProfileStore((s) => s.uploading);
+  const [draftPrefix, setDraftPrefix] = useState(profile.prefix);
+  const [draftName, setDraftName] = useState(profile.name);
+
+  useEffect(() => setDraftPrefix(profile.prefix), [profile.prefix]);
+  useEffect(() => setDraftName(profile.name), [profile.name]);
+
+  function handleAvatarFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    uploadAvatar(file);
+  }
 
   const apiKey = useAIStore((s) => s.apiKey);
   const setApiKey = useAIStore((s) => s.setApiKey);
@@ -144,6 +166,68 @@ export function SettingsPage() {
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} subtitle={t("subtitle")} />
 
       <Stack spacing={3}>
+        <Card sx={{ p: 3 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+            <PersonOutlineOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{t("profileTitle")}</Typography>
+          </Stack>
+          <Typography variant="body2" sx={{ color: "text.secondary", mb: 2.5 }}>
+            {t("profileDesc")}
+          </Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={3} alignItems={{ xs: "flex-start", sm: "center" }}>
+            <Stack alignItems="center" spacing={1}>
+              <Avatar
+                src={profile.avatarUrl || undefined}
+                sx={{ width: 72, height: 72, fontSize: "1.5rem", bgcolor: "primary.main", color: "primary.contrastText" }}
+              >
+                {!profile.avatarUrl && (profile.name.trim()[0]?.toUpperCase() ?? <PersonOutlineOutlinedIcon />)}
+              </Avatar>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  disabled={uploadingAvatar}
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  {uploadingAvatar ? t("uploadingPhoto") : profile.avatarUrl ? t("changePhoto") : t("uploadPhoto")}
+                </Button>
+                {profile.avatarUrl && (
+                  <Button size="small" color="error" onClick={removeAvatar}>
+                    {t("removePhoto")}
+                  </Button>
+                )}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleAvatarFile}
+                />
+              </Stack>
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ flex: 1, width: "100%" }}>
+              <TextField
+                size="small"
+                label={t("prefixLabel")}
+                placeholder={t("prefixPlaceholder")}
+                value={draftPrefix}
+                onChange={(e) => setDraftPrefix(e.target.value)}
+                onBlur={() => draftPrefix !== profile.prefix && updateProfile({ prefix: draftPrefix })}
+                sx={{ width: { xs: "100%", sm: 160 } }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label={t("nameLabel")}
+                placeholder={t("namePlaceholder")}
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                onBlur={() => draftName !== profile.name && updateProfile({ name: draftName })}
+              />
+            </Stack>
+          </Stack>
+        </Card>
+
         <Card sx={{ p: 3 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 2 }}>{t("appearance")}</Typography>
           <Grid container spacing={3}>
