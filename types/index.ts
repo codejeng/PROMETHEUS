@@ -323,6 +323,7 @@ export interface ExternalPaperResult {
   arxivId?: string;
   relevance: number; // 0-1, keyword-overlap score against the query
   citationCount?: number; // from Semantic Scholar / OpenAlex / Crossref, where available
+  publishedDate?: string; // ISO date, where the source exposes a full date (not just year)
 }
 
 export interface ResearchSearchResponse {
@@ -347,4 +348,58 @@ export interface GapAnalysisReport {
   mostCitedPapers: ExternalPaperResult[];
   readingOrder: ReadingOrderItem[];
   thesisIdeas: string[];
+}
+
+// ---------- Daily Research Briefing ----------
+
+export type NewsSource = "TechCrunch" | "VentureBeat" | "MIT News";
+
+export interface NewsItem {
+  title: string;
+  source: NewsSource;
+  url: string;
+  publishedDate?: string;
+  snippet?: string;
+}
+
+export interface GithubProject {
+  name: string;
+  url: string;
+  description: string;
+  stars: number;
+  language?: string;
+}
+
+export interface ScoredPaper {
+  paper: ExternalPaperResult;
+  whyItMatters: string;
+  connectionToInterests: string;
+}
+
+export interface ScoredNewsItem {
+  item: NewsItem;
+  whyItMatters: string;
+  connectionToInterests: string;
+}
+
+export interface ScoredProject {
+  project: GithubProject;
+  whyItMatters: string;
+}
+
+export interface DailyBriefingReport {
+  date: string; // ISO date this briefing covers
+  isQuiet: boolean; // true if there was nothing significant — quietMessage is the only populated field besides date
+  quietMessage?: string;
+  highlights: string[];
+  topPapers: ScoredPaper[];
+  topNews: ScoredNewsItem[];
+  topProjects: ScoredProject[];
+  conferences: string[];
+  funding: string[];
+  trends: string[];
+  researchIdeas: string[];
+  researchGapOfTheDay: string;
+  questionWorthThinking: string;
+  quoteOfTheDay: string;
 }

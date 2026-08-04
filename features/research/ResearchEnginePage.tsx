@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { PipelineFlow } from "./PipelineFlow";
 import { ResearchResultCard, GeneratedSummary } from "./ResearchResultCard";
 import { GapAnalysisPanel } from "./GapAnalysisPanel";
+import { DailyBriefingPanel } from "./DailyBriefingPanel";
 import { usePapersStore } from "@/store/usePapersStore";
 import { useAIStore } from "@/store/useAIStore";
 import { ExternalPaperResult, ResearchSearchResponse } from "@/types";
@@ -38,7 +39,7 @@ export function ResearchEnginePage() {
   const aiStatus = useAIStore((s) => s.status);
   const hasApiKey = aiStatus === "connected" && apiKey.length > 0;
 
-  const [tab, setTab] = useState<"search" | "gap">("search");
+  const [tab, setTab] = useState<"search" | "gap" | "briefing">("search");
   const [goal, setGoal] = useState("");
   const [phase, setPhase] = useState<"idle" | "searching" | "done">("idle");
   const [response, setResponse] = useState<ResearchSearchResponse | null>(null);
@@ -129,10 +130,13 @@ export function ResearchEnginePage() {
       >
         <ToggleButton value="search">{t("tabSearch")}</ToggleButton>
         <ToggleButton value="gap">{t("tabGapAnalysis")}</ToggleButton>
+        <ToggleButton value="briefing">{t("tabDailyBriefing")}</ToggleButton>
       </ToggleButtonGroup>
 
       {tab === "gap" ? (
         <GapAnalysisPanel />
+      ) : tab === "briefing" ? (
+        <DailyBriefingPanel />
       ) : (
         <>
       <Card sx={{ p: 3, mb: 3 }}>

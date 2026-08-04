@@ -19,10 +19,15 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
   }
 }
 
-export async function searchArxiv(query: string, limit = 8): Promise<ExternalPaperResult[]> {
+export async function searchArxiv(
+  query: string,
+  limit = 8,
+  opts?: { sortByDate?: boolean }
+): Promise<ExternalPaperResult[]> {
+  const sortParams = opts?.sortByDate ? "&sortBy=submittedDate&sortOrder=descending" : "";
   const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(
     query
-  )}&start=0&max_results=${limit}`;
+  )}&start=0&max_results=${limit}${sortParams}`;
   const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`arXiv responded ${res.status}`);
   const xml = await res.text();
@@ -49,6 +54,7 @@ export async function searchArxiv(query: string, limit = 8): Promise<ExternalPap
       arxivId,
       url: idUrl,
       relevance: 0,
+      publishedDate: published,
     };
   });
 }
@@ -56,7 +62,7 @@ export async function searchArxiv(query: string, limit = 8): Promise<ExternalPap
 export async function searchSemanticScholar(query: string, limit = 8): Promise<ExternalPaperResult[]> {
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(
     query
-  )}&limit=${limit}&fields=title,authors,year,abstract,externalIds,url,citationCount`;
+  )}&limit=${limit}&fields=title,authors,year,abstract,externalIds,url,citationCount,publicationDate`;
   const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`Semantic Scholar responded ${res.status}`);
   const data = await res.json();
@@ -76,6 +82,7 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<E
       url: typeof p.url === "string" ? p.url : undefined,
       relevance: 0,
       citationCount: typeof p.citationCount === "number" ? p.citationCount : undefined,
+      publishedDate: typeof p.publicationDate === "string" ? p.publicationDate : undefined,
     };
   });
 }
@@ -100,6 +107,7 @@ export async function searchOpenAlex(query: string, limit = 8): Promise<External
       url: typeof w.id === "string" ? w.id : undefined,
       relevance: 0,
       citationCount: typeof w.cited_by_count === "number" ? w.cited_by_count : undefined,
+      publishedDate: typeof w.publication_date === "string" ? w.publication_date : undefined,
     };
   });
 }
@@ -115,6 +123,13 @@ export async function searchCrossref(query: string, limit = 8): Promise<External
     const titleArr = it.title as string[] | undefined;
     const authorsArr = (it.author as Array<{ given?: string; family?: string }>) ?? [];
     const yearParts = (it.issued as { "date-parts"?: number[][] })?.["date-parts"]?.[0];
+    const publishedParts =
+      (it.published as { "date-parts"?: number[][] })?.["date-parts"]?.[0] ??
+      (it["published-online"] as { "date-parts"?: number[][] })?.["date-parts"]?.[0] ??
+      (it["published-print"] as { "date-parts"?: number[][] })?.["date-parts"]?.[0];
+    const publishedDate = publishedParts
+      ? new Date(Date.UTC(publishedParts[0], (publishedParts[1] ?? 1) - 1, publishedParts[2] ?? 1)).toISOString()
+      : undefined;
     return {
       id: `crossref:${it.DOI}`,
       source: "crossref",
@@ -126,6 +141,7 @@ export async function searchCrossref(query: string, limit = 8): Promise<External
       url: typeof it.URL === "string" ? it.URL : undefined,
       relevance: 0,
       citationCount: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : undefined,
+      publishedDate,
     };
   });
 }

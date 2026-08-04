@@ -308,6 +308,26 @@
     "gapTopLabs": "ห้องแล็บชั้นนำ",
     "gapMostCited": "บทความที่ถูกอ้างอิงมากที่สุด",
     "gapReadingOrder": "ลำดับการอ่านที่แนะนำ",
-    "gapThesisIdeas": "ไอเดียวิทยานิพนธ์ที่เป็นไปได้"
+    "gapThesisIdeas": "ไอเดียวิทยานิพนธ์ที่เป็นไปได้",
+    "tabDailyBriefing": "สรุปข่าวประจำวัน",
+    "briefingTitle": "รายงานข่าวกรองงานวิจัยประจำวัน",
+    "briefingDesc": "สแกน arXiv, Semantic Scholar, OpenAlex, Crossref, TechCrunch, VentureBeat, MIT News และ GitHub ในช่วงไม่กี่วันที่ผ่านมา แล้วให้ AI ที่เชื่อมต่อไว้ให้คะแนนและสรุปสิ่งที่สำคัญจริง ๆ",
+    "briefingGenerate": "สร้างสรุปข่าววันนี้",
+    "briefingGenerating": "กำลังสแกนแหล่งข้อมูล…",
+    "briefingError": "ไม่สามารถสร้างสรุปข่าวได้",
+    "briefingEmptyTitle": "ยังไม่มีสรุปข่าว",
+    "briefingEmptyDesc": "สร้างสรุปข่าวเพื่อดูไฮไลต์วันนี้ บทความเด่น ข่าวอุตสาหกรรม โปรเจกต์โอเพนซอร์ส และอื่น ๆ — อ้างอิงจากรายการจริงที่เพิ่งเผยแพร่",
+    "briefingQuietTitle": "วันนี้ค่อนข้างเงียบ",
+    "briefingHighlights": "ไฮไลต์วันนี้",
+    "briefingTopPapers": "บทความวิจัยเด่น",
+    "briefingTopNews": "ข่าวอุตสาหกรรมเด่น",
+    "briefingTopProjects": "โปรเจกต์โอเพนซอร์สเด่น",
+    "briefingFunding": "ข่าวเงินทุน",
+    "briefingConferences": "งานประชุมที่น่าสนใจ",
+    "briefingTrends": "แนวโน้มที่กำลังเกิดขึ้น",
+    "briefingResearchIdeas": "ไอเดียงานวิจัยที่เป็นไปได้",
+    "briefingGapOfDay": "ช่องว่างงานวิจัยประจำวัน",
+    "briefingQuestion": "คำถามที่ควรค่าแก่การคิดต่อ",
+    "briefingQuote": "คำคมประจำวัน"
   }
 }

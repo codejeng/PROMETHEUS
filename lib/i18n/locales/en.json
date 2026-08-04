@@ -308,6 +308,26 @@
     "gapTopLabs": "Top Labs",
     "gapMostCited": "Most Cited Papers",
     "gapReadingOrder": "Suggested Reading Order",
-    "gapThesisIdeas": "Potential Thesis Ideas"
+    "gapThesisIdeas": "Potential Thesis Ideas",
+    "tabDailyBriefing": "Daily Briefing",
+    "briefingTitle": "Daily Research Intelligence",
+    "briefingDesc": "Scans arXiv, Semantic Scholar, OpenAlex, Crossref, TechCrunch, VentureBeat, MIT News, and GitHub from the last few days, then has your AI connection score and summarize what actually matters.",
+    "briefingGenerate": "Generate Today's Briefing",
+    "briefingGenerating": "Scanning sources…",
+    "briefingError": "Couldn't generate the briefing.",
+    "briefingEmptyTitle": "No briefing yet",
+    "briefingEmptyDesc": "Generate a briefing to see today's highlights, top papers, industry news, open-source projects, and more — grounded in real, recently-published items.",
+    "briefingQuietTitle": "Quiet day",
+    "briefingHighlights": "Today's Highlights",
+    "briefingTopPapers": "Top Research Papers",
+    "briefingTopNews": "Top Industry News",
+    "briefingTopProjects": "Top Open Source Projects",
+    "briefingFunding": "Funding News",
+    "briefingConferences": "Interesting Conferences",
+    "briefingTrends": "Emerging Trends",
+    "briefingResearchIdeas": "Potential Research Ideas",
+    "briefingGapOfDay": "Research Gap of the Day",
+    "briefingQuestion": "Question Worth Thinking About",
+    "briefingQuote": "Quote of the Day"
   }
 }
