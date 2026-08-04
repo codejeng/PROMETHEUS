@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Box, Stack, Typography, IconButton, Tooltip, Avatar, ButtonBase } from "@mui/material";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
@@ -74,21 +75,37 @@ export function Sidebar() {
         bgcolor: "background.paper",
       }}
     >
-      <Box sx={{ px: 3, pt: 3.5, pb: 2 }}>
-        <Typography
-          variant="h6"
+      <Box sx={{ px: 3, pt: 3.5, pb: 2, display: "flex", alignItems: "center", gap: 1.25 }}>
+        <Box
           sx={{
-            fontFamily: "var(--font-playfair), serif",
-            fontWeight: 600,
-            letterSpacing: "0.06em",
-            fontSize: "1.15rem",
+            width: 40,
+            height: 40,
+            borderRadius: 2,
+            overflow: "hidden",
+            flexShrink: 0,
+            border: "1px solid",
+            borderColor: "divider",
           }}
         >
-          PROMETHEUS
-        </Typography>
-        <Typography variant="caption" sx={{ color: "text.disabled", letterSpacing: "0.02em" }}>
-          {t("brandTagline")}
-        </Typography>
+          <Image src="/PROMETHEUS-logo.png" alt="" width={100} height={100} style={{ width: "100%", height: "100%", objectFit: "cover" }} priority />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="h6"
+            noWrap
+            sx={{
+              fontFamily: "var(--font-playfair), serif",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              fontSize: "1.15rem",
+            }}
+          >
+            PROMETHEUS
+          </Typography>
+          <Typography variant="caption" noWrap sx={{ color: "text.disabled", letterSpacing: "0.02em", display: "block" }}>
+            {t("brandTagline")}
+          </Typography>
+        </Box>
       </Box>
 
       <Stack sx={{ flex: 1, overflowY: "auto", px: 1.5, py: 1, gap: 0.25 }}>

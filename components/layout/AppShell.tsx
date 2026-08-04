@@ -3,6 +3,7 @@
 import { Box } from "@mui/material";
 import { Sidebar } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
+import { Footer } from "./Footer";
 import { CommandPalette } from "@/features/search/CommandPalette";
 import { DataBootstrap } from "./DataBootstrap";
 
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}
       >
         <PageTransition>{children}</PageTransition>
+        <Footer />
       </Box>
       <CommandPalette />
     </Box>
