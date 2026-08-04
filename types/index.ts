@@ -322,6 +322,7 @@ export interface ExternalPaperResult {
   url?: string;
   arxivId?: string;
   relevance: number; // 0-1, keyword-overlap score against the query
+  citationCount?: number; // from Semantic Scholar / OpenAlex / Crossref, where available
 }
 
 export interface ResearchSearchResponse {
@@ -329,4 +330,21 @@ export interface ResearchSearchResponse {
   results: ExternalPaperResult[];
   sourceStatus: Record<ResearchSource, "ok" | "error" | "empty">;
   errors: Partial<Record<ResearchSource, string>>;
+}
+
+// ---------- Research Gap Agent ----------
+
+export interface ReadingOrderItem {
+  paper: ExternalPaperResult;
+  reason: string;
+}
+
+export interface GapAnalysisReport {
+  topic: string;
+  currentState: string;
+  openProblems: string[];
+  topLabs: string[];
+  mostCitedPapers: ExternalPaperResult[];
+  readingOrder: ReadingOrderItem[];
+  thesisIdeas: string[];
 }

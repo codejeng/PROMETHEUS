@@ -56,7 +56,7 @@ export async function searchArxiv(query: string, limit = 8): Promise<ExternalPap
 export async function searchSemanticScholar(query: string, limit = 8): Promise<ExternalPaperResult[]> {
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(
     query
-  )}&limit=${limit}&fields=title,authors,year,abstract,externalIds,url`;
+  )}&limit=${limit}&fields=title,authors,year,abstract,externalIds,url,citationCount`;
   const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`Semantic Scholar responded ${res.status}`);
   const data = await res.json();
@@ -75,6 +75,7 @@ export async function searchSemanticScholar(query: string, limit = 8): Promise<E
       arxivId: externalIds.ArXiv,
       url: typeof p.url === "string" ? p.url : undefined,
       relevance: 0,
+      citationCount: typeof p.citationCount === "number" ? p.citationCount : undefined,
     };
   });
 }
@@ -98,6 +99,7 @@ export async function searchOpenAlex(query: string, limit = 8): Promise<External
       doi: typeof w.doi === "string" ? w.doi.replace("https://doi.org/", "") : undefined,
       url: typeof w.id === "string" ? w.id : undefined,
       relevance: 0,
+      citationCount: typeof w.cited_by_count === "number" ? w.cited_by_count : undefined,
     };
   });
 }
@@ -123,6 +125,7 @@ export async function searchCrossref(query: string, limit = 8): Promise<External
       doi: typeof it.DOI === "string" ? it.DOI : undefined,
       url: typeof it.URL === "string" ? it.URL : undefined,
       relevance: 0,
+      citationCount: typeof it["is-referenced-by-count"] === "number" ? it["is-referenced-by-count"] : undefined,
     };
   });
 }

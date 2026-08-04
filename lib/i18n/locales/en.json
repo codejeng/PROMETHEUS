@@ -292,6 +292,22 @@
     "summarizing": "Summarizing…",
     "summarizeError": "Couldn't generate a summary.",
     "keyInsightLabel": "Key insight",
-    "connectToSummarize": "Connect an API key in Settings to summarize papers."
+    "connectToSummarize": "Connect an API key in Settings to summarize papers.",
+    "tabSearch": "Paper Search",
+    "tabGapAnalysis": "Research Gap Agent",
+    "gapTopicLabel": "Topic",
+    "gapTopicPlaceholder": "e.g. AI for plasma control",
+    "gapRunAnalysis": "Analyze",
+    "gapAnalyzing": "Analyzing…",
+    "gapAnalysisError": "Couldn't complete the analysis.",
+    "gapAiGatedDesc": "Connect an API key in Settings to run gap analysis.",
+    "gapEmptyTitle": "No analysis yet",
+    "gapEmptyDesc": "Enter a topic to see current state, open problems, top labs, most-cited papers, a reading order, and potential thesis ideas — grounded in real papers from arXiv, Semantic Scholar, OpenAlex, and Crossref.",
+    "gapCurrentState": "Current State",
+    "gapOpenProblems": "Open Problems",
+    "gapTopLabs": "Top Labs",
+    "gapMostCited": "Most Cited Papers",
+    "gapReadingOrder": "Suggested Reading Order",
+    "gapThesisIdeas": "Potential Thesis Ideas"
   }
 }

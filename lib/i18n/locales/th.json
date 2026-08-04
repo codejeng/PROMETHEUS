@@ -292,6 +292,22 @@
     "summarizing": "กำลังสรุป…",
     "summarizeError": "ไม่สามารถสรุปเนื้อหาได้",
     "keyInsightLabel": "ข้อค้นพบสำคัญ",
-    "connectToSummarize": "เชื่อมต่อ API key ในหน้าตั้งค่าเพื่อสรุปบทความ"
+    "connectToSummarize": "เชื่อมต่อ API key ในหน้าตั้งค่าเพื่อสรุปบทความ",
+    "tabSearch": "ค้นหาบทความ",
+    "tabGapAnalysis": "เอเจนต์วิเคราะห์ช่องว่างงานวิจัย",
+    "gapTopicLabel": "หัวข้อ",
+    "gapTopicPlaceholder": "เช่น AI สำหรับควบคุมพลาสมา",
+    "gapRunAnalysis": "วิเคราะห์",
+    "gapAnalyzing": "กำลังวิเคราะห์…",
+    "gapAnalysisError": "ไม่สามารถวิเคราะห์ได้สำเร็จ",
+    "gapAiGatedDesc": "เชื่อมต่อ API key ในหน้าตั้งค่าเพื่อวิเคราะห์ช่องว่างงานวิจัย",
+    "gapEmptyTitle": "ยังไม่มีการวิเคราะห์",
+    "gapEmptyDesc": "ใส่หัวข้อเพื่อดูสถานะปัจจุบัน ปัญหาที่ยังไม่มีคำตอบ ห้องแล็บชั้นนำ บทความที่ถูกอ้างอิงมากที่สุด ลำดับการอ่านที่แนะนำ และไอเดียวิทยานิพนธ์ที่เป็นไปได้ — อ้างอิงจากบทความจริงจาก arXiv, Semantic Scholar, OpenAlex และ Crossref",
+    "gapCurrentState": "สถานะปัจจุบัน",
+    "gapOpenProblems": "ปัญหาที่ยังไม่มีคำตอบ",
+    "gapTopLabs": "ห้องแล็บชั้นนำ",
+    "gapMostCited": "บทความที่ถูกอ้างอิงมากที่สุด",
+    "gapReadingOrder": "ลำดับการอ่านที่แนะนำ",
+    "gapThesisIdeas": "ไอเดียวิทยานิพนธ์ที่เป็นไปได้"
   }
 }

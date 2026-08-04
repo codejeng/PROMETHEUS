@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Box, TextField, Button, Grid, Card, Typography, Stack, InputAdornment } from "@mui/material";
+import {
+  Box,
+  TextField,
+  Button,
+  Grid,
+  Card,
+  Typography,
+  Stack,
+  InputAdornment,
+  ToggleButtonGroup,
+  ToggleButton,
+} from "@mui/material";
 import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -10,6 +21,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PipelineFlow } from "./PipelineFlow";
 import { ResearchResultCard, GeneratedSummary } from "./ResearchResultCard";
+import { GapAnalysisPanel } from "./GapAnalysisPanel";
 import { usePapersStore } from "@/store/usePapersStore";
 import { useAIStore } from "@/store/useAIStore";
 import { ExternalPaperResult, ResearchSearchResponse } from "@/types";
@@ -26,6 +38,7 @@ export function ResearchEnginePage() {
   const aiStatus = useAIStore((s) => s.status);
   const hasApiKey = aiStatus === "connected" && apiKey.length > 0;
 
+  const [tab, setTab] = useState<"search" | "gap">("search");
   const [goal, setGoal] = useState("");
   const [phase, setPhase] = useState<"idle" | "searching" | "done">("idle");
   const [response, setResponse] = useState<ResearchSearchResponse | null>(null);
@@ -107,6 +120,21 @@ export function ResearchEnginePage() {
         subtitle={t("subtitle")}
       />
 
+      <ToggleButtonGroup
+        value={tab}
+        exclusive
+        onChange={(_, v) => v && setTab(v)}
+        size="small"
+        sx={{ mb: 3 }}
+      >
+        <ToggleButton value="search">{t("tabSearch")}</ToggleButton>
+        <ToggleButton value="gap">{t("tabGapAnalysis")}</ToggleButton>
+      </ToggleButtonGroup>
+
+      {tab === "gap" ? (
+        <GapAnalysisPanel />
+      ) : (
+        <>
       <Card sx={{ p: 3, mb: 3 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5 }}>
           {t("goalLabel")}
@@ -211,6 +239,8 @@ export function ResearchEnginePage() {
           </Stack>
         </Grid>
       </Grid>
+        </>
+      )}
     </Box>
   );
 }
