@@ -7,6 +7,7 @@ import AddIcon from "@mui/icons-material/Add";
 import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useQuestionsStore } from "@/store/useQuestionsStore";
 import { QuestionCard } from "./QuestionCard";
 import { QuestionDialog } from "./QuestionDialog";
@@ -16,6 +17,7 @@ import { useT } from "@/hooks/useT";
 export function QuestionsPage() {
   const t = useT("questions");
   const items = useQuestionsStore((s) => s.items);
+  const hydrated = useQuestionsStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<ResearchQuestion | null>(
@@ -43,7 +45,9 @@ export function QuestionsPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={HelpOutlineOutlinedIcon}
           title={t("emptyTitle")}

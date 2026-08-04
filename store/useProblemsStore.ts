@@ -1,5 +1,5 @@
-import { createEntityStore } from "./createEntityStore";
+import { createSupabaseEntityStore } from "./createSupabaseEntityStore";
 import { Problem } from "@/types";
 import { problemsSeed } from "@/lib/seedData";
 
-export const useProblemsStore = createEntityStore<Problem>("problems", problemsSeed);
+export const useProblemsStore = createSupabaseEntityStore<Problem>("problems", problemsSeed);

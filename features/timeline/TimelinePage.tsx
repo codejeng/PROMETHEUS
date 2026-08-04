@@ -8,6 +8,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import { useTimelineStore } from "@/store/useTimelineStore";
 import { MilestoneDialog } from "./MilestoneDialog";
@@ -26,6 +27,7 @@ const categoryColor: Record<TimelineMilestone["category"], string> = {
 export function TimelinePage() {
   const t = useT("timeline");
   const items = useTimelineStore((s) => s.items);
+  const hydrated = useTimelineStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<TimelineMilestone | null>(() => items.find((m) => m.id === initialId) ?? null);
@@ -46,7 +48,9 @@ export function TimelinePage() {
         }
       />
 
-      {sorted.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : sorted.length === 0 ? (
         <EmptyState
           icon={TimelineOutlinedIcon}
           title={t("emptyTitle")}

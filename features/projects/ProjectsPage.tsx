@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Box, Button } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { PageHeader } from "@/components/common/PageHeader";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useProjectsStore } from "@/store/useProjectsStore";
 import { KanbanColumn } from "./KanbanColumn";
 import { ProjectDialog } from "./ProjectDialog";
@@ -23,6 +24,7 @@ const stageKeys: Record<Project["stage"], string> = {
 export function ProjectsPage() {
   const t = useT("projects");
   const items = useProjectsStore((s) => s.items);
+  const hydrated = useProjectsStore((s) => s.hydrated);
   const update = useProjectsStore((s) => s.update);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
@@ -53,6 +55,9 @@ export function ProjectsPage() {
         }
       />
 
+      {!hydrated ? (
+        <LoadingState />
+      ) : (
       <Box sx={{ display: "flex", gap: 2, overflowX: "auto", pb: 2 }}>
         {stages.map((stage) => (
           <KanbanColumn
@@ -73,6 +78,7 @@ export function ProjectsPage() {
           />
         ))}
       </Box>
+      )}
 
       <ProjectDialog
         open={dialogOpen}

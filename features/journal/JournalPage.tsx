@@ -8,6 +8,7 @@ import LocalFireDepartmentOutlinedIcon from "@mui/icons-material/LocalFireDepart
 import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { StatCard } from "@/components/common/StatCard";
 import { useJournalStore } from "@/store/useJournalStore";
 import { computeJournalStreak } from "@/lib/dashboardStats";
@@ -19,6 +20,7 @@ import { useT } from "@/hooks/useT";
 export function JournalPage() {
   const t = useT("journal");
   const items = useJournalStore((s) => s.items);
+  const hydrated = useJournalStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<JournalEntry | null>(() => items.find((j) => j.id === initialId) ?? null);
@@ -50,7 +52,9 @@ export function JournalPage() {
         </Box>
       </Stack>
 
-      {sorted.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : sorted.length === 0 ? (
         <EmptyState
           icon={EditNoteOutlinedIcon}
           title={t("emptyTitle")}

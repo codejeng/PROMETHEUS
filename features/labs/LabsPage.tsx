@@ -7,6 +7,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useLabsStore } from "@/store/useLabsStore";
 import { LabCard } from "./LabCard";
 import { LabDialog } from "./LabDialog";
@@ -18,6 +19,7 @@ const statuses: LabStatus[] = ["Dream", "Applying", "Contacted", "Accepted", "Re
 export function LabsPage() {
   const t = useT("labs");
   const items = useLabsStore((s) => s.items);
+  const hydrated = useLabsStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<Lab | null>(() => items.find((l) => l.id === initialId) ?? null);
@@ -36,7 +38,9 @@ export function LabsPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={ScienceOutlinedIcon}
           title={t("emptyTitle")}

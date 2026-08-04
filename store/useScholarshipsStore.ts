@@ -1,5 +1,8 @@
-import { createEntityStore } from "./createEntityStore";
+import { createSupabaseEntityStore } from "./createSupabaseEntityStore";
 import { Scholarship } from "@/types";
 import { scholarshipsSeed } from "@/lib/seedData";
 
-export const useScholarshipsStore = createEntityStore<Scholarship>("scholarships", scholarshipsSeed);
+export const useScholarshipsStore = createSupabaseEntityStore<Scholarship>(
+  "scholarships",
+  scholarshipsSeed
+);

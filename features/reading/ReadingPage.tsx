@@ -8,6 +8,7 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { usePapersStore } from "@/store/usePapersStore";
 import { PaperTable } from "./PaperTable";
 import { PaperCard } from "./PaperCard";
@@ -26,6 +27,7 @@ const statusColor: Record<ReadingStatus, string> = {
 export function ReadingPage() {
   const t = useT("reading");
   const items = usePapersStore((s) => s.items);
+  const hydrated = usePapersStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<Paper | null>(
@@ -71,7 +73,9 @@ export function ReadingPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={MenuBookOutlinedIcon}
           title={t("emptyTitle")}

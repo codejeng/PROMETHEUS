@@ -7,6 +7,7 @@ import AddIcon from "@mui/icons-material/Add";
 import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { LoadingState } from "@/components/common/LoadingState";
 import { useProblemsStore } from "@/store/useProblemsStore";
 import { ProblemCard } from "./ProblemCard";
 import { ProblemDialog } from "./ProblemDialog";
@@ -16,6 +17,7 @@ import { useT } from "@/hooks/useT";
 export function ProblemsPage() {
   const t = useT("problems");
   const items = useProblemsStore((s) => s.items);
+  const hydrated = useProblemsStore((s) => s.hydrated);
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
   const [selected, setSelected] = useState<Problem | null>(
@@ -43,7 +45,9 @@ export function ProblemsPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {!hydrated ? (
+        <LoadingState />
+      ) : items.length === 0 ? (
         <EmptyState
           icon={PublicOutlinedIcon}
           title={t("emptyTitle")}

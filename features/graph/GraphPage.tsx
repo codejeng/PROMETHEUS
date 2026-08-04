@@ -33,7 +33,9 @@ export function GraphPage() {
   const storeEdges = useGraphStore((s) => s.edges);
   const addEdge = useGraphStore((s) => s.addEdge);
   const updateNodePosition = useGraphStore((s) => s.updateNodePosition);
+  const commitNodePosition = useGraphStore((s) => s.commitNodePosition);
   const removeNode = useGraphStore((s) => s.removeNode);
+  const hydrated = useGraphStore((s) => s.hydrated);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const nodes: Node[] = useMemo(
@@ -68,10 +70,16 @@ export function GraphPage() {
       changes.forEach((c) => {
         if (c.type === "position" && c.position) {
           updateNodePosition(c.id, c.position.x, c.position.y);
+          // Persist only once the drag ends — position changes fire on
+          // every pointer move, and writing to the DB on each one would
+          // be excessive and laggy.
+          if (c.dragging === false) {
+            commitNodePosition(c.id, c.position.x, c.position.y);
+          }
         }
       });
     },
-    [updateNodePosition]
+    [updateNodePosition, commitNodePosition]
   );
 
   const onConnect = useCallback(
@@ -133,7 +141,7 @@ export function GraphPage() {
           />
         </ReactFlow>
       </Box>
-      {nodes.length === 0 && (
+      {hydrated && nodes.length === 0 && (
         <Typography variant="body2" sx={{ color: "text.secondary", mt: 2 }}>
           {tr("emptyState")}
         </Typography>

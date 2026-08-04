@@ -4,10 +4,12 @@ import { Box } from "@mui/material";
 import { Sidebar } from "./Sidebar";
 import { PageTransition } from "./PageTransition";
 import { CommandPalette } from "@/features/search/CommandPalette";
+import { DataBootstrap } from "./DataBootstrap";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
+      <DataBootstrap />
       <Sidebar />
       <Box
         component="main"
