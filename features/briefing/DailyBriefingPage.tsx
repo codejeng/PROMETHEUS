@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { alpha, useTheme } from "@mui/material/styles";
 import {
@@ -12,6 +12,11 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Grid,
+  IconButton,
+  Autocomplete,
+  TextField,
+  Tooltip,
 } from "@mui/material";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
@@ -20,10 +25,25 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import StarBorderOutlinedIcon from "@mui/icons-material/StarBorderOutlined";
 import FormatQuoteOutlinedIcon from "@mui/icons-material/FormatQuoteOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import CheckIcon from "@mui/icons-material/Check";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useAIStore } from "@/store/useAIStore";
-import { DailyBriefingReport } from "@/types";
+import { useBriefingInterestsStore } from "@/store/useBriefingInterestsStore";
+import {
+  BriefingStageName,
+  BriefingStageStatus,
+  BriefingStreamEvent,
+  DailyBriefingReport,
+  GithubProject,
+  NewsItem,
+  ScoredNewsItem,
+  ScoredPaper,
+  ScoredProject,
+} from "@/types";
 import { useT } from "@/hooks/useT";
 import { formatDate } from "@/utils/date";
 import toast from "react-hot-toast";
@@ -37,8 +57,19 @@ const SECTIONS = [
   { id: "reflect", labelKey: "reflect" },
 ] as const;
 
+const STAGE_ORDER: BriefingStageName[] = ["papers", "news", "projects", "ai"];
+type StageMap = Record<BriefingStageName, BriefingStageStatus>;
+const IDLE_STAGES: StageMap = { papers: "idle", news: "idle", projects: "idle", ai: "idle" };
+
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function StageIcon({ status }: { status: BriefingStageStatus }) {
+  if (status === "active") return <CircularProgress size={13} sx={{ color: "primary.main" }} />;
+  if (status === "done") return <CheckCircleOutlineIcon sx={{ fontSize: 15, color: "success.main" }} />;
+  if (status === "error") return <ErrorOutlineIcon sx={{ fontSize: 15, color: "error.main" }} />;
+  return null;
 }
 
 export function DailyBriefingPage() {
@@ -50,22 +81,73 @@ export function DailyBriefingPage() {
   const aiStatus = useAIStore((s) => s.status);
   const hasApiKey = aiStatus === "connected" && apiKey.length > 0;
 
+  const interests = useBriefingInterestsStore((s) => s.interests);
+  const interestsHydrated = useBriefingInterestsStore((s) => s.hydrated);
+  const updateInterests = useBriefingInterestsStore((s) => s.update);
+  const [editingTopics, setEditingTopics] = useState(false);
+  const [draftPrimary, setDraftPrimary] = useState<string[]>([]);
+  const [draftSecondary, setDraftSecondary] = useState<string[]>([]);
+
+  useEffect(() => {
+    setDraftPrimary(interests.primaryTopics);
+    setDraftSecondary(interests.secondaryTopics);
+  }, [interests.primaryTopics, interests.secondaryTopics]);
+
+  function saveTopics() {
+    updateInterests({ primaryTopics: draftPrimary, secondaryTopics: draftSecondary });
+    setEditingTopics(false);
+  }
+
   const [loading, setLoading] = useState(false);
+  const [stages, setStages] = useState<StageMap>(IDLE_STAGES);
   const [report, setReport] = useState<DailyBriefingReport | null>(null);
 
   async function runBriefing() {
     if (!hasApiKey) return;
     setLoading(true);
     setReport(null);
+    setStages(IDLE_STAGES);
     try {
       const res = await fetch("/api/research/daily-briefing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey, baseURL, model }),
+        body: JSON.stringify({
+          apiKey,
+          baseURL,
+          model,
+          primaryTopics: interests.primaryTopics,
+          secondaryTopics: interests.secondaryTopics,
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? t("error"));
-      setReport(data);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? t("error"));
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fatalError: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event: BriefingStreamEvent = JSON.parse(line);
+          if (event.stage === "complete") {
+            setReport(event.report);
+          } else if (event.stage === "fatal") {
+            fatalError = event.error;
+          } else {
+            setStages((prev) => ({ ...prev, [event.stage]: event.status }));
+          }
+        }
+      }
+      if (fatalError) throw new Error(fatalError);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("error"));
     } finally {
@@ -106,6 +188,92 @@ export function DailyBriefingPage() {
         </Card>
       )}
 
+      <Card sx={{ p: 2.5, mb: 3 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TuneOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{t("interestsTitle")}</Typography>
+          </Stack>
+          {editingTopics ? (
+            <Button size="small" startIcon={<CheckIcon sx={{ fontSize: 15 }} />} onClick={saveTopics}>
+              {t("interestsSave")}
+            </Button>
+          ) : (
+            <Button size="small" onClick={() => setEditingTopics(true)} disabled={!interestsHydrated}>
+              {t("interestsEdit")}
+            </Button>
+          )}
+        </Stack>
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          {t("interestsDesc")}
+        </Typography>
+
+        {!editingTopics ? (
+          <Stack spacing={1} sx={{ mt: 1.5 }}>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              {interests.primaryTopics.map((topic) => (
+                <Chip key={topic} label={topic} size="small" />
+              ))}
+            </Stack>
+            {interests.secondaryTopics.length > 0 && (
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {interests.secondaryTopics.map((topic) => (
+                  <Chip key={topic} label={topic} size="small" variant="outlined" />
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        ) : (
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <Autocomplete
+              multiple
+              freeSolo
+              size="small"
+              options={[]}
+              value={draftPrimary}
+              onChange={(_, v) => setDraftPrimary(v as string[])}
+              renderInput={(params) => (
+                <TextField {...params} label={t("interestsPrimaryLabel")} placeholder={t("interestsAddPlaceholder")} />
+              )}
+            />
+            <Autocomplete
+              multiple
+              freeSolo
+              size="small"
+              options={[]}
+              value={draftSecondary}
+              onChange={(_, v) => setDraftSecondary(v as string[])}
+              renderInput={(params) => (
+                <TextField {...params} label={t("interestsSecondaryLabel")} placeholder={t("interestsAddPlaceholder")} />
+              )}
+            />
+          </Stack>
+        )}
+      </Card>
+
+      {loading && (
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
+          {STAGE_ORDER.map((stage, i) => (
+            <Stack key={stage} direction="row" alignItems="center" spacing={1.5}>
+              <Chip
+                size="small"
+                icon={stages[stage] === "idle" ? undefined : <StageIcon status={stages[stage]} />}
+                label={t(`stage_${stage}`)}
+                variant={stages[stage] === "idle" ? "outlined" : "filled"}
+                sx={{
+                  fontWeight: 500,
+                  bgcolor:
+                    stages[stage] === "done" ? "success.main" : stages[stage] === "error" ? "error.main" : stages[stage] === "active" ? "primary.main" : "transparent",
+                  color: stages[stage] === "idle" ? "text.secondary" : undefined,
+                  "& .MuiChip-icon": { color: "inherit" },
+                }}
+              />
+              {i < STAGE_ORDER.length - 1 && <Typography sx={{ color: "text.disabled", fontSize: 12 }}>→</Typography>}
+            </Stack>
+          ))}
+        </Stack>
+      )}
+
       {!report && !loading && (
         <EmptyState icon={TodayOutlinedIcon} title={t("emptyTitle")} description={t("emptyDesc")} />
       )}
@@ -144,79 +312,39 @@ export function DailyBriefingPage() {
           {report.topPapers.length > 0 && (
             <Box id="papers">
               <Typography variant="h5" sx={{ mb: 2 }}>{t("topPapers")}</Typography>
-              <Card sx={{ p: 0 }}>
-                <Stack divider={<Divider />}>
-                  {report.topPapers.map((sp) => (
-                    <Box key={sp.paper.id} sx={{ p: 2.5 }}>
-                      <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>{sp.paper.title}</Typography>
-                        {sp.paper.url && (
-                          <Button size="small" href={sp.paper.url} target="_blank" rel="noopener noreferrer" sx={{ minWidth: 0, p: 0.25 }}>
-                            <OpenInNewIcon sx={{ fontSize: 13 }} />
-                          </Button>
-                        )}
-                      </Stack>
-                      <Typography variant="caption" sx={{ color: "text.disabled" }}>
-                        {sp.paper.authors.slice(0, 3).join(", ")}
-                        {sp.paper.authors.length > 3 ? " et al." : ""}
-                        {sp.paper.publishedDate ? ` · ${formatDate(sp.paper.publishedDate)}` : ""}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.75 }}>{sp.whyItMatters}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Card>
+              <Grid container spacing={2}>
+                {report.topPapers.map((sp) => (
+                  <Grid key={sp.paper.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                    <PaperCard scored={sp} />
+                  </Grid>
+                ))}
+              </Grid>
             </Box>
           )}
 
           {report.topNews.length > 0 && (
             <Box id="news">
               <Typography variant="h5" sx={{ mb: 2 }}>{t("topNews")}</Typography>
-              <Card sx={{ p: 0 }}>
-                <Stack divider={<Divider />}>
-                  {report.topNews.map((sn, i) => (
-                    <Box key={sn.item.url + i} sx={{ p: 2.5 }}>
-                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                        <Chip label={sn.item.source} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>{sn.item.title}</Typography>
-                        {sn.item.url && (
-                          <Button size="small" href={sn.item.url} target="_blank" rel="noopener noreferrer" sx={{ minWidth: 0, p: 0.25 }}>
-                            <OpenInNewIcon sx={{ fontSize: 13 }} />
-                          </Button>
-                        )}
-                      </Stack>
-                      <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.75 }}>{sn.whyItMatters}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Card>
+              <Grid container spacing={2}>
+                {report.topNews.map((sn, i) => (
+                  <Grid key={sn.item.url + i} size={{ xs: 12, sm: 6, md: 4 }}>
+                    <NewsCard scored={sn} />
+                  </Grid>
+                ))}
+              </Grid>
             </Box>
           )}
 
           {report.topProjects.length > 0 && (
             <Box id="projects">
               <Typography variant="h5" sx={{ mb: 2 }}>{t("topProjects")}</Typography>
-              <Card sx={{ p: 0 }}>
-                <Stack divider={<Divider />}>
-                  {report.topProjects.map((sp, i) => (
-                    <Box key={sp.project.url + i} sx={{ p: 2.5 }}>
-                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>{sp.project.name}</Typography>
-                        <Stack direction="row" spacing={0.4} alignItems="center">
-                          <StarBorderOutlinedIcon sx={{ fontSize: 14, color: "text.disabled" }} />
-                          <Typography variant="caption" sx={{ color: "text.disabled" }}>{sp.project.stars}</Typography>
-                        </Stack>
-                        {sp.project.url && (
-                          <Button size="small" href={sp.project.url} target="_blank" rel="noopener noreferrer" sx={{ minWidth: 0, p: 0.25 }}>
-                            <OpenInNewIcon sx={{ fontSize: 13 }} />
-                          </Button>
-                        )}
-                      </Stack>
-                      <Typography variant="body2" sx={{ color: "text.secondary", mt: 0.75 }}>{sp.whyItMatters}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              </Card>
+              <Grid container spacing={2}>
+                {report.topProjects.map((sp, i) => (
+                  <Grid key={sp.project.url + i} size={{ xs: 12, sm: 6, md: 4 }}>
+                    <ProjectCard scored={sp} />
+                  </Grid>
+                ))}
+              </Grid>
             </Box>
           )}
 
@@ -315,5 +443,67 @@ export function DailyBriefingPage() {
         </Stack>
       )}
     </Box>
+  );
+}
+
+function CardOpenLink({ url }: { url?: string }) {
+  if (!url) return null;
+  return (
+    <Tooltip title={url}>
+      <IconButton size="small" href={url} target="_blank" rel="noopener noreferrer" sx={{ ml: "auto" }}>
+        <OpenInNewIcon sx={{ fontSize: 15 }} />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
+function PaperCard({ scored }: { scored: ScoredPaper }) {
+  const p = scored.paper;
+  return (
+    <Card sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+      <Stack direction="row" alignItems="center">
+        <Chip label={p.source} size="small" sx={{ height: 18, fontSize: "0.62rem" }} />
+        <CardOpenLink url={p.url} />
+      </Stack>
+      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{p.title}</Typography>
+      <Typography variant="caption" sx={{ color: "text.disabled" }}>
+        {p.authors.slice(0, 2).join(", ")}
+        {p.authors.length > 2 ? " et al." : ""}
+        {p.publishedDate ? ` · ${formatDate(p.publishedDate)}` : ""}
+      </Typography>
+      <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.85rem", flex: 1 }}>{scored.whyItMatters}</Typography>
+    </Card>
+  );
+}
+
+function NewsCard({ scored }: { scored: ScoredNewsItem }) {
+  const n: NewsItem = scored.item;
+  return (
+    <Card sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+      <Stack direction="row" alignItems="center">
+        <Chip label={n.source} size="small" sx={{ height: 18, fontSize: "0.62rem" }} />
+        <CardOpenLink url={n.url} />
+      </Stack>
+      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{n.title}</Typography>
+      <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.85rem", flex: 1 }}>{scored.whyItMatters}</Typography>
+    </Card>
+  );
+}
+
+function ProjectCard({ scored }: { scored: ScoredProject }) {
+  const p: GithubProject = scored.project;
+  return (
+    <Card sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        {p.language && <Chip label={p.language} size="small" sx={{ height: 18, fontSize: "0.62rem" }} />}
+        <Stack direction="row" spacing={0.4} alignItems="center">
+          <StarBorderOutlinedIcon sx={{ fontSize: 14, color: "text.disabled" }} />
+          <Typography variant="caption" sx={{ color: "text.disabled" }}>{p.stars}</Typography>
+        </Stack>
+        <CardOpenLink url={p.url} />
+      </Stack>
+      <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{p.name}</Typography>
+      <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.85rem", flex: 1 }}>{scored.whyItMatters}</Typography>
+    </Card>
   );
 }

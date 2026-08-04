@@ -13,6 +13,7 @@ import { useVisionStore } from "@/store/useVisionStore";
 import { useSOPStore } from "@/store/useSOPStore";
 import { useGraphStore } from "@/store/useGraphStore";
 import { useProfileStore } from "@/store/useProfileStore";
+import { useBriefingInterestsStore } from "@/store/useBriefingInterestsStore";
 
 /**
  * Fires every store's initial Supabase fetch once, on first mount.
@@ -33,6 +34,7 @@ export function DataBootstrap() {
   const fetchSOP = useSOPStore((s) => s.fetch);
   const fetchGraph = useGraphStore((s) => s.fetch);
   const fetchProfile = useProfileStore((s) => s.fetch);
+  const fetchBriefingInterests = useBriefingInterestsStore((s) => s.fetch);
 
   useEffect(() => {
     fetchProblems();
@@ -47,6 +49,7 @@ export function DataBootstrap() {
     fetchSOP();
     fetchGraph();
     fetchProfile();
+    fetchBriefingInterests();
   }, [
     fetchProblems,
     fetchQuestions,
@@ -60,6 +63,7 @@ export function DataBootstrap() {
     fetchSOP,
     fetchGraph,
     fetchProfile,
+    fetchBriefingInterests,
   ]);
 
   return null;

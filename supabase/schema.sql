@@ -193,6 +193,22 @@ create table if not exists profile (
   avatar_url text not null default ''
 );
 
+-- ---------- Daily Briefing interests (single row, singleton) ----------
+create table if not exists briefing_interests (
+  id boolean primary key default true check (id),
+  updated_at timestamptz not null default now(),
+  primary_topics jsonb not null default '[
+    "Nuclear Fusion", "Plasma Physics", "AI for Science", "Artificial Intelligence",
+    "Quantum Computing", "Robotics", "Brain Computer Interface", "Space Technology",
+    "Advanced Manufacturing", "Future Energy"
+  ]',
+  secondary_topics jsonb not null default '[
+    "MIT", "Stanford", "ETH Zurich", "EPFL", "Caltech", "Cambridge", "Oxford",
+    "Princeton Plasma Physics Laboratory", "ITER", "EUROfusion",
+    "OpenAI", "Anthropic", "DeepMind", "NVIDIA", "SpaceX", "Neuralink"
+  ]'
+);
+
 -- ---------- Knowledge Graph ----------
 create table if not exists graph_nodes (
   id text primary key,
@@ -215,6 +231,7 @@ create table if not exists graph_edges (
 insert into vision (id) values (true) on conflict (id) do nothing;
 insert into sop_document (id) values (true) on conflict (id) do nothing;
 insert into profile (id) values (true) on conflict (id) do nothing;
+insert into briefing_interests (id) values (true) on conflict (id) do nothing;
 
 -- Tables created via the Table Editor UI are auto-granted to `anon` and
 -- `authenticated`; tables created via raw SQL (like this file) are not —
@@ -223,7 +240,7 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on
   problems, research_questions, papers, projects, labs, scholarships,
   timeline_milestones, journal_entries, vision, sop_document, sop_versions,
-  graph_nodes, graph_edges, profile
+  graph_nodes, graph_edges, profile, briefing_interests
   to anon, authenticated;
 
 -- Single-user app, no auth: rather than disabling RLS outright (which
@@ -239,7 +256,8 @@ begin
   foreach t in array array[
     'problems', 'research_questions', 'papers', 'projects', 'labs',
     'scholarships', 'timeline_milestones', 'journal_entries', 'vision',
-    'sop_document', 'sop_versions', 'graph_nodes', 'graph_edges', 'profile'
+    'sop_document', 'sop_versions', 'graph_nodes', 'graph_edges', 'profile',
+    'briefing_interests'
   ]
   loop
     execute format('alter table %I enable row level security', t);

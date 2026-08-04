@@ -403,3 +403,26 @@ export interface DailyBriefingReport {
   questionWorthThinking: string;
   quoteOfTheDay: string;
 }
+
+export interface BriefingInterests {
+  primaryTopics: string[];
+  secondaryTopics: string[];
+  updatedAt: ISODate;
+}
+
+export type BriefingStageName = "papers" | "news" | "projects" | "ai";
+export type BriefingStageStatus = "idle" | "active" | "done" | "error";
+export interface BriefingProgressEvent {
+  stage: BriefingStageName;
+  status: BriefingStageStatus;
+  count?: number;
+}
+export interface BriefingCompleteEvent {
+  stage: "complete";
+  report: DailyBriefingReport;
+}
+export interface BriefingErrorEvent {
+  stage: "fatal";
+  error: string;
+}
+export type BriefingStreamEvent = BriefingProgressEvent | BriefingCompleteEvent | BriefingErrorEvent;

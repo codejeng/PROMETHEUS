@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { sourceSearchers, searchArxiv } from "@/lib/research/sources";
 import { fetchAllNews, searchGithubRepos } from "@/lib/research/dailySources";
 import { scoreRelevance, dedupeByTitle } from "@/lib/research/relevance";
 import {
+  BriefingStreamEvent,
   DailyBriefingReport,
   ExternalPaperResult,
   GithubProject,
@@ -15,31 +16,22 @@ import {
 
 export const runtime = "nodejs";
 
-// Kept in sync with the "User Interests" list the daily-briefing spec was
-// built from. Primary topics drive the academic + GitHub search queries;
-// all of them (primary + secondary) are used to score news relevance.
-const PRIMARY_TOPICS = [
-  "Nuclear Fusion",
-  "Plasma Physics",
-  "AI for Science",
-  "Artificial Intelligence",
-  "Quantum Computing",
-  "Robotics",
-  "Brain Computer Interface",
-  "Space Technology",
-  "Advanced Manufacturing",
-  "Future Energy",
+// Fallbacks if the client sends no interest topics (e.g. an older cached
+// build). The user-facing, editable copy of these lives in the
+// briefing_interests Supabase table — see store/useBriefingInterestsStore.ts.
+const DEFAULT_PRIMARY_TOPICS = [
+  "Nuclear Fusion", "Plasma Physics", "AI for Science", "Artificial Intelligence",
+  "Quantum Computing", "Robotics", "Brain Computer Interface", "Space Technology",
+  "Advanced Manufacturing", "Future Energy",
 ];
-const SECONDARY_TOPICS = [
+const DEFAULT_SECONDARY_TOPICS = [
   "MIT", "Stanford", "ETH Zurich", "EPFL", "Caltech", "Cambridge", "Oxford",
   "Princeton Plasma Physics Laboratory", "ITER", "EUROfusion",
   "OpenAI", "Anthropic", "DeepMind", "NVIDIA", "SpaceX", "Neuralink",
 ];
-const GITHUB_KEYWORDS = [
-  "nuclear fusion", "plasma physics", "quantum computing", "robotics", "brain computer interface", "AI for science",
-];
+const MAX_GITHUB_KEYWORDS = 8;
 
-const LOOKBACK_DAYS = 3; // "last 24h" is too thin across 10 niche topics in practice; see CONTEXT.md
+const LOOKBACK_DAYS = 3; // "last 24h" is too thin across niche topics in practice; see CONTEXT.md
 const MAX_TOKENS = 6000;
 
 const NOISE_PATTERNS = /sponsored|advertisement|partner content|press release/i;
@@ -48,6 +40,8 @@ interface DailyBriefingRequestBody {
   apiKey: string;
   baseURL: string;
   model: string;
+  primaryTopics?: string[];
+  secondaryTopics?: string[];
 }
 
 interface CandidatePaper {
@@ -63,8 +57,9 @@ interface CandidateProject {
   project: GithubProject;
 }
 
-const SYSTEM_PROMPT = `You are a research analyst producing a daily intelligence briefing for a researcher \
-focused on: ${PRIMARY_TOPICS.join(", ")} (institutions/orgs of interest: ${SECONDARY_TOPICS.join(", ")}).
+function buildSystemPrompt(primaryTopics: string[], secondaryTopics: string[]): string {
+  return `You are a research analyst producing a daily intelligence briefing for a researcher \
+focused on: ${primaryTopics.join(", ")} (institutions/orgs of interest: ${secondaryTopics.join(", ")}).
 
 You will be given candidate papers, news items, and GitHub projects retrieved in the last ${LOOKBACK_DAYS} days. \
 Think like a research analyst, not a search engine: prioritize high-impact, high-novelty items and ignore \
@@ -97,161 +92,221 @@ Hard limits: at most 10 papers, 10 news items, 5 GitHub projects, 3 funding-rela
   "questionWorthThinking": string,     // one open-ended question for the reader to sit with
   "quoteOfTheDay": string              // a short relevant quote (attribute it if you use a real one; otherwise write one original aphorism-style line and don't attribute it to anyone)
 }`;
+}
 
 export async function POST(req: NextRequest) {
   const body: DailyBriefingRequestBody = await req.json();
   const { apiKey, baseURL, model } = body;
+  const primaryTopics = body.primaryTopics?.length ? body.primaryTopics : DEFAULT_PRIMARY_TOPICS;
+  const secondaryTopics = body.secondaryTopics?.length ? body.secondaryTopics : DEFAULT_SECONDARY_TOPICS;
 
   if (!apiKey || typeof apiKey !== "string") {
-    return NextResponse.json({ error: "Missing API key" }, { status: 400 });
+    return jsonError("Missing API key", 400);
   }
   if (!baseURL || !model) {
-    return NextResponse.json({ error: "Missing provider base URL or model" }, { status: 400 });
+    return jsonError("Missing provider base URL or model", 400);
   }
 
-  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000);
-  const sinceISODate = since.toISOString().slice(0, 10);
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(event: BriefingStreamEvent) {
+        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+      }
 
-  const [papers, newsResult, projects] = await Promise.all([
-    fetchRecentPapers(since),
-    fetchAllNews(),
-    fetchRecentProjects(sinceISODate),
-  ]);
+      try {
+        const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 3600 * 1000);
+        const sinceISODate = since.toISOString().slice(0, 10);
 
-  const recentNews = newsResult.items.filter(
-    (n) => !NOISE_PATTERNS.test(n.title) && (!n.publishedDate || new Date(n.publishedDate) >= since)
-  );
-  const interestQuery = [...PRIMARY_TOPICS, ...SECONDARY_TOPICS].join(" ");
-  const relevantNews = recentNews
-    .map((n) => ({ n, score: scoreRelevance(interestQuery, { title: n.title, abstract: n.snippet }) }))
-    .filter((x) => x.score > 0.05)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 30)
-    .map((x) => x.n);
+        send({ stage: "papers", status: "active" });
+        send({ stage: "news", status: "active" });
+        send({ stage: "projects", status: "active" });
 
-  const candidatePapers: CandidatePaper[] = papers.slice(0, 25).map((p, i) => ({ id: `paper:${i}`, paper: p }));
-  const candidateNews: CandidateNews[] = relevantNews.map((n, i) => ({ id: `news:${i}`, item: n }));
-  const candidateProjects: CandidateProject[] = projects.slice(0, 15).map((p, i) => ({ id: `gh:${i}`, project: p }));
+        const [papers, newsResult, projects] = await Promise.all([
+          fetchRecentPapers(since, primaryTopics)
+            .then((r) => {
+              send({ stage: "papers", status: "done", count: r.length });
+              return r;
+            })
+            .catch(() => {
+              send({ stage: "papers", status: "error" });
+              return [] as ExternalPaperResult[];
+            }),
+          fetchAllNews()
+            .then((r) => {
+              send({ stage: "news", status: "done", count: r.items.length });
+              return r;
+            })
+            .catch(() => {
+              send({ stage: "news", status: "error" });
+              return { items: [] as NewsItem[], errors: {} };
+            }),
+          fetchRecentProjects(sinceISODate, primaryTopics)
+            .then((r) => {
+              send({ stage: "projects", status: "done", count: r.length });
+              return r;
+            })
+            .catch(() => {
+              send({ stage: "projects", status: "error" });
+              return [] as GithubProject[];
+            }),
+        ]);
 
-  const totalCandidates = candidatePapers.length + candidateNews.length + candidateProjects.length;
+        const recentNews = newsResult.items.filter(
+          (n) => !NOISE_PATTERNS.test(n.title) && (!n.publishedDate || new Date(n.publishedDate) >= since)
+        );
+        const interestQuery = [...primaryTopics, ...secondaryTopics].join(" ");
+        const relevantNews = recentNews
+          .map((n) => ({ n, score: scoreRelevance(interestQuery, { title: n.title, abstract: n.snippet }) }))
+          .filter((x) => x.score > 0.05)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 30)
+          .map((x) => x.n);
 
-  if (totalCandidates < 3) {
-    const quiet: DailyBriefingReport = emptyReport(
-      "Today is relatively quiet. Nothing significant happened in your research domains."
-    );
-    return NextResponse.json(quiet);
-  }
+        const candidatePapers: CandidatePaper[] = papers.slice(0, 25).map((p, i) => ({ id: `paper:${i}`, paper: p }));
+        const candidateNews: CandidateNews[] = relevantNews.map((n, i) => ({ id: `news:${i}`, item: n }));
+        const candidateProjects: CandidateProject[] = projects.slice(0, 15).map((p, i) => ({ id: `gh:${i}`, project: p }));
 
-  const candidateBlock = [
-    "Papers:",
-    ...candidatePapers.map((c) => formatPaperCandidate(c)),
-    "",
-    "News:",
-    ...candidateNews.map((c) => formatNewsCandidate(c)),
-    "",
-    "GitHub projects:",
-    ...candidateProjects.map((c) => formatProjectCandidate(c)),
-  ].join("\n");
+        const totalCandidates = candidatePapers.length + candidateNews.length + candidateProjects.length;
 
-  const client = new OpenAI({ apiKey, baseURL });
+        if (totalCandidates < 3) {
+          send({
+            stage: "complete",
+            report: emptyReport("Today is relatively quiet. Nothing significant happened in your research domains."),
+          });
+          controller.close();
+          return;
+        }
 
-  try {
-    let content: string | null | undefined;
-    try {
-      const response = await client.chat.completions.create({
-        model,
-        max_tokens: MAX_TOKENS,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: candidateBlock },
-        ],
-      });
-      content = response.choices[0]?.message?.content;
-    } catch {
-      const response = await client.chat.completions.create({
-        model,
-        max_tokens: MAX_TOKENS,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: candidateBlock },
-        ],
-      });
-      content = response.choices[0]?.message?.content;
-    }
+        const candidateBlock = [
+          "Papers:",
+          ...candidatePapers.map(formatPaperCandidate),
+          "",
+          "News:",
+          ...candidateNews.map(formatNewsCandidate),
+          "",
+          "GitHub projects:",
+          ...candidateProjects.map(formatProjectCandidate),
+        ].join("\n");
 
-    if (!content) {
-      return NextResponse.json({ error: "No briefing was returned." }, { status: 502 });
-    }
+        send({ stage: "ai", status: "active" });
+        const client = new OpenAI({ apiKey, baseURL });
+        const systemPrompt = buildSystemPrompt(primaryTopics, secondaryTopics);
 
-    const parsed = extractJSON(content);
-    if (!parsed) {
-      return NextResponse.json({ error: "The model's response wasn't valid JSON." }, { status: 502 });
-    }
+        let content: string | null | undefined;
+        try {
+          const response = await client.chat.completions.create({
+            model,
+            max_tokens: MAX_TOKENS,
+            response_format: { type: "json_object" },
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: candidateBlock },
+            ],
+          });
+          content = response.choices[0]?.message?.content;
+        } catch {
+          const response = await client.chat.completions.create({
+            model,
+            max_tokens: MAX_TOKENS,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: candidateBlock },
+            ],
+          });
+          content = response.choices[0]?.message?.content;
+        }
 
-    if (parsed.isQuiet) {
-      const quiet = emptyReport(
-        typeof parsed.quietMessage === "string" && parsed.quietMessage
-          ? parsed.quietMessage
-          : "Today is relatively quiet. Nothing significant happened in your research domains."
-      );
-      return NextResponse.json(quiet);
-    }
+        if (!content) {
+          send({ stage: "ai", status: "error" });
+          send({ stage: "fatal", error: "No briefing was returned." });
+          controller.close();
+          return;
+        }
 
-    const paperById = new Map(candidatePapers.map((c) => [c.id, c.paper]));
-    const newsById = new Map(candidateNews.map((c) => [c.id, c.item]));
-    const projectById = new Map(candidateProjects.map((c) => [c.id, c.project]));
+        const parsed = extractJSON(content);
+        if (!parsed) {
+          send({ stage: "ai", status: "error" });
+          send({ stage: "fatal", error: "The model's response wasn't valid JSON." });
+          controller.close();
+          return;
+        }
 
-    const topPapers: ScoredPaper[] = asArray(parsed.topPapers)
-      .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && paperById.has(r.id))
-      .slice(0, 10)
-      .map((r) => ({
-        paper: paperById.get(r.id)!,
-        whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
-        connectionToInterests: typeof r.connectionToInterests === "string" ? r.connectionToInterests : "",
-      }));
+        send({ stage: "ai", status: "done" });
 
-    const topNews: ScoredNewsItem[] = asArray(parsed.topNews)
-      .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && newsById.has(r.id))
-      .slice(0, 10)
-      .map((r) => ({
-        item: newsById.get(r.id)!,
-        whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
-        connectionToInterests: typeof r.connectionToInterests === "string" ? r.connectionToInterests : "",
-      }));
+        if (parsed.isQuiet) {
+          send({
+            stage: "complete",
+            report: emptyReport(
+              typeof parsed.quietMessage === "string" && parsed.quietMessage
+                ? parsed.quietMessage
+                : "Today is relatively quiet. Nothing significant happened in your research domains."
+            ),
+          });
+          controller.close();
+          return;
+        }
 
-    const topProjects: ScoredProject[] = asArray(parsed.topProjects)
-      .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && projectById.has(r.id))
-      .slice(0, 5)
-      .map((r) => ({
-        project: projectById.get(r.id)!,
-        whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
-      }));
+        const paperById = new Map(candidatePapers.map((c) => [c.id, c.paper]));
+        const newsById = new Map(candidateNews.map((c) => [c.id, c.item]));
+        const projectById = new Map(candidateProjects.map((c) => [c.id, c.project]));
 
-    const report: DailyBriefingReport = {
-      date: new Date().toISOString().slice(0, 10),
-      isQuiet: false,
-      highlights: asStringArray(parsed.highlights),
-      topPapers,
-      topNews,
-      topProjects,
-      conferences: asStringArray(parsed.conferences),
-      funding: asStringArray(parsed.funding),
-      trends: asStringArray(parsed.trends),
-      researchIdeas: asStringArray(parsed.researchIdeas),
-      researchGapOfTheDay: typeof parsed.researchGapOfTheDay === "string" ? parsed.researchGapOfTheDay : "",
-      questionWorthThinking: typeof parsed.questionWorthThinking === "string" ? parsed.questionWorthThinking : "",
-      quoteOfTheDay: typeof parsed.quoteOfTheDay === "string" ? parsed.quoteOfTheDay : "",
-    };
+        const topPapers: ScoredPaper[] = asArray(parsed.topPapers)
+          .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && paperById.has(r.id))
+          .slice(0, 10)
+          .map((r) => ({
+            paper: paperById.get(r.id)!,
+            whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
+            connectionToInterests: typeof r.connectionToInterests === "string" ? r.connectionToInterests : "",
+          }));
 
-    return NextResponse.json(report);
-  } catch (err) {
-    return NextResponse.json({ error: describeError(err) }, { status: 502 });
-  }
+        const topNews: ScoredNewsItem[] = asArray(parsed.topNews)
+          .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && newsById.has(r.id))
+          .slice(0, 10)
+          .map((r) => ({
+            item: newsById.get(r.id)!,
+            whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
+            connectionToInterests: typeof r.connectionToInterests === "string" ? r.connectionToInterests : "",
+          }));
+
+        const topProjects: ScoredProject[] = asArray(parsed.topProjects)
+          .filter((r): r is Record<string, unknown> & { id: string } => !!r && typeof r.id === "string" && projectById.has(r.id))
+          .slice(0, 5)
+          .map((r) => ({
+            project: projectById.get(r.id)!,
+            whyItMatters: typeof r.whyItMatters === "string" ? r.whyItMatters : "",
+          }));
+
+        const report: DailyBriefingReport = {
+          date: new Date().toISOString().slice(0, 10),
+          isQuiet: false,
+          highlights: asStringArray(parsed.highlights),
+          topPapers,
+          topNews,
+          topProjects,
+          conferences: asStringArray(parsed.conferences),
+          funding: asStringArray(parsed.funding),
+          trends: asStringArray(parsed.trends),
+          researchIdeas: asStringArray(parsed.researchIdeas),
+          researchGapOfTheDay: typeof parsed.researchGapOfTheDay === "string" ? parsed.researchGapOfTheDay : "",
+          questionWorthThinking: typeof parsed.questionWorthThinking === "string" ? parsed.questionWorthThinking : "",
+          quoteOfTheDay: typeof parsed.quoteOfTheDay === "string" ? parsed.quoteOfTheDay : "",
+        };
+
+        send({ stage: "complete", report });
+      } catch (err) {
+        send({ stage: "fatal", error: describeError(err) });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, { headers: { "Content-Type": "application/x-ndjson" } });
 }
 
-async function fetchRecentPapers(since: Date): Promise<ExternalPaperResult[]> {
-  const query = PRIMARY_TOPICS.map((t) => `"${t}"`).join(" OR ");
+async function fetchRecentPapers(since: Date, primaryTopics: string[]): Promise<ExternalPaperResult[]> {
+  const query = primaryTopics.map((t) => `"${t}"`).join(" OR ");
   const settled = await Promise.allSettled([
     searchArxiv(query, 20, { sortByDate: true }),
     sourceSearchers.semanticScholar(query, 15),
@@ -266,8 +321,9 @@ async function fetchRecentPapers(since: Date): Promise<ExternalPaperResult[]> {
   return dedupeByTitle(recent).sort((a, b) => (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""));
 }
 
-async function fetchRecentProjects(sinceISODate: string): Promise<GithubProject[]> {
-  const settled = await Promise.allSettled(GITHUB_KEYWORDS.map((kw) => searchGithubRepos(kw, sinceISODate, 5)));
+async function fetchRecentProjects(sinceISODate: string, primaryTopics: string[]): Promise<GithubProject[]> {
+  const keywords = primaryTopics.slice(0, MAX_GITHUB_KEYWORDS);
+  const settled = await Promise.allSettled(keywords.map((kw) => searchGithubRepos(kw, sinceISODate, 5)));
   const seen = new Set<string>();
   const out: GithubProject[] = [];
   settled.forEach((result) => {
@@ -363,4 +419,8 @@ function describeError(err: unknown): string {
   }
   if (err instanceof Error) return err.message;
   return "Could not reach the AI provider.";
+}
+
+function jsonError(error: string, status: number): Response {
+  return new Response(JSON.stringify({ error }), { status, headers: { "Content-Type": "application/json" } });
 }
