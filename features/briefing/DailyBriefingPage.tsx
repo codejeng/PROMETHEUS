@@ -46,6 +46,7 @@ import {
 } from "@/types";
 import { useT } from "@/hooks/useT";
 import { formatDate } from "@/utils/date";
+import { DiscussButton } from "@/features/voiceChat/DiscussButton";
 import toast from "react-hot-toast";
 
 const SECTIONS = [
@@ -450,7 +451,7 @@ function CardOpenLink({ url }: { url?: string }) {
   if (!url) return null;
   return (
     <Tooltip title={url}>
-      <IconButton size="small" href={url} target="_blank" rel="noopener noreferrer" sx={{ ml: "auto" }}>
+      <IconButton size="small" href={url} target="_blank" rel="noopener noreferrer">
         <OpenInNewIcon sx={{ fontSize: 15 }} />
       </IconButton>
     </Tooltip>
@@ -463,7 +464,14 @@ function PaperCard({ scored }: { scored: ScoredPaper }) {
     <Card sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
       <Stack direction="row" alignItems="center">
         <Chip label={p.source} size="small" sx={{ height: 18, fontSize: "0.62rem" }} />
-        <CardOpenLink url={p.url} />
+        <Stack direction="row" sx={{ ml: "auto" }}>
+          <DiscussButton
+            title={p.title}
+            contextKey={p.id}
+            context={[`Title: ${p.title}`, p.abstract ? `Abstract: ${p.abstract}` : null, `Why it matters: ${scored.whyItMatters}`].filter(Boolean).join("\n")}
+          />
+          <CardOpenLink url={p.url} />
+        </Stack>
       </Stack>
       <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{p.title}</Typography>
       <Typography variant="caption" sx={{ color: "text.disabled" }}>
@@ -482,7 +490,14 @@ function NewsCard({ scored }: { scored: ScoredNewsItem }) {
     <Card sx={{ p: 2.5, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
       <Stack direction="row" alignItems="center">
         <Chip label={n.source} size="small" sx={{ height: 18, fontSize: "0.62rem" }} />
-        <CardOpenLink url={n.url} />
+        <Stack direction="row" sx={{ ml: "auto" }}>
+          <DiscussButton
+            title={n.title}
+            contextKey={n.url}
+            context={[`Title: ${n.title}`, n.snippet ? `Summary: ${n.snippet}` : null, `Why it matters: ${scored.whyItMatters}`].filter(Boolean).join("\n")}
+          />
+          <CardOpenLink url={n.url} />
+        </Stack>
       </Stack>
       <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{n.title}</Typography>
       <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.85rem", flex: 1 }}>{scored.whyItMatters}</Typography>
@@ -500,7 +515,14 @@ function ProjectCard({ scored }: { scored: ScoredProject }) {
           <StarBorderOutlinedIcon sx={{ fontSize: 14, color: "text.disabled" }} />
           <Typography variant="caption" sx={{ color: "text.disabled" }}>{p.stars}</Typography>
         </Stack>
-        <CardOpenLink url={p.url} />
+        <Stack direction="row" sx={{ ml: "auto" }}>
+          <DiscussButton
+            title={p.name}
+            contextKey={p.url}
+            context={[`Project: ${p.name}`, p.description ? `Description: ${p.description}` : null, `Why it matters: ${scored.whyItMatters}`].filter(Boolean).join("\n")}
+          />
+          <CardOpenLink url={p.url} />
+        </Stack>
       </Stack>
       <Typography variant="body1" sx={{ fontWeight: 600, fontSize: "0.92rem" }}>{p.name}</Typography>
       <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "0.85rem", flex: 1 }}>{scored.whyItMatters}</Typography>

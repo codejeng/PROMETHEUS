@@ -4,6 +4,7 @@ import LibraryAddOutlinedIcon from "@mui/icons-material/LibraryAddOutlined";
 import CheckIcon from "@mui/icons-material/Check";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { ExternalPaperResult, ResearchSource } from "@/types";
+import { DiscussButton } from "@/features/voiceChat/DiscussButton";
 
 const sourceLabel: Record<ResearchSource, string> = {
   arxiv: "arXiv",
@@ -123,6 +124,15 @@ export function ResearchResultCard({
             </Button>
           </span>
         </Tooltip>
+        <DiscussButton
+          title={paper.title}
+          contextKey={paper.id}
+          context={[
+            `Title: ${paper.title}`,
+            paper.authors.length ? `Authors: ${paper.authors.join(", ")}` : null,
+            summary ? `Summary: ${summary.summary}` : paper.abstract ? `Abstract: ${paper.abstract}` : null,
+          ].filter(Boolean).join("\n")}
+        />
         <Button
           size="small"
           variant={alreadyAdded ? "outlined" : "contained"}

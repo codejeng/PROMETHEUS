@@ -346,5 +346,22 @@
     "researchIdeas": "Potential Research Ideas",
     "gapOfDay": "Research Gap of the Day",
     "question": "Question Worth Thinking About"
+  },
+  "voiceChat": {
+    "discussButton": "Discuss",
+    "discussTooltip": "Talk about this out loud with AI",
+    "aiGatedTooltip": "Connect an API key in Settings to discuss with AI",
+    "subtitle": "Ask anything about this, out loud or typed",
+    "statusListening": "Listening…",
+    "statusThinking": "Thinking…",
+    "statusSpeaking": "Speaking…",
+    "emptyWithMic": "Tap the mic and ask a question, or type below.",
+    "emptyNoMic": "Type a question below to start the conversation.",
+    "startListening": "Start talking",
+    "stopListening": "Stop listening",
+    "stopSpeaking": "Stop speaking",
+    "textPlaceholder": "Type a message…",
+    "error": "Couldn't get a reply.",
+    "micError": "Microphone error — check your browser's mic permission."
   }
 }

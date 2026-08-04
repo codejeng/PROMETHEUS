@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { useAIStore } from "@/store/useAIStore";
 import { GapAnalysisReport } from "@/types";
 import { useT } from "@/hooks/useT";
+import { DiscussButton } from "@/features/voiceChat/DiscussButton";
 import toast from "react-hot-toast";
 
 export function GapAnalysisPanel() {
@@ -111,9 +112,21 @@ export function GapAnalysisPanel() {
       {report && (
         <Stack spacing={3}>
           <Card sx={{ p: 3 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              {t("gapCurrentState")}
-            </Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t("gapCurrentState")}
+              </Typography>
+              <DiscussButton
+                title={report.topic}
+                contextKey={report.topic}
+                context={[
+                  `Topic: ${report.topic}`,
+                  `Current state: ${report.currentState}`,
+                  `Open problems: ${report.openProblems.join(" | ")}`,
+                  `Top labs: ${report.topLabs.join(", ")}`,
+                ].join("\n")}
+              />
+            </Stack>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
               {report.currentState}
             </Typography>
