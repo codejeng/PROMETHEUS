@@ -10,6 +10,7 @@ import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import TravelExploreOutlinedIcon from "@mui/icons-material/TravelExploreOutlined";
+import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
 import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
 import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
@@ -34,6 +35,7 @@ const nav = [
   { href: "/projects", key: "projects", icon: ViewKanbanOutlinedIcon },
   { href: "/graph", key: "graph", icon: HubOutlinedIcon },
   { href: "/research", key: "research", icon: TravelExploreOutlinedIcon },
+  { href: "/briefing", key: "briefing", icon: TodayOutlinedIcon },
   { href: "/labs", key: "labs", icon: ScienceOutlinedIcon },
   { href: "/scholarships", key: "scholarships", icon: SchoolOutlinedIcon },
   { href: "/timeline", key: "timeline", icon: TimelineOutlinedIcon },
