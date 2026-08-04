@@ -72,7 +72,7 @@ export function Sidebar() {
         zIndex: 1,
         display: "flex",
         flexDirection: "column",
-        borderRight: "1px solid",
+        borderRight: "0.25px solid",
         borderColor: alpha(theme.palette.divider, theme.palette.mode === "dark" ? 0.7 : 1),
         bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.55 : 0.65),
         backdropFilter: "blur(20px) saturate(180%)",
