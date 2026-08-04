@@ -132,10 +132,30 @@ function VoiceChatBody({ title, context, onClose }: { title: string; context: st
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = locale === "th" ? "th-TH" : "en-US";
+    // The default speechSynthesis rate (1.0) reads noticeably slower and
+    // flatter than natural conversational speech — bump it for a livelier,
+    // less robotic pace, closer to how a person actually talks.
+    utterance.rate = 1.15;
+    utterance.pitch = 1.02;
+    const voice = pickVoice(utterance.lang);
+    if (voice) utterance.voice = voice;
     utterance.onend = () => setPhase("idle");
     utterance.onerror = () => setPhase("idle");
     setPhase("speaking");
     window.speechSynthesis.speak(utterance);
+  }
+
+  function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
+    const voices = window.speechSynthesis?.getVoices() ?? [];
+    const matching = voices.filter((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)));
+    if (matching.length === 0) return undefined;
+    // Prefer higher-quality "natural"/"neural"/"premium"-style voices Chrome
+    // exposes on top of the default robotic system voice, where available.
+    return (
+      matching.find((v) => /natural|neural|premium|enhanced/i.test(v.name)) ??
+      matching.find((v) => v.name.toLowerCase().includes("google")) ??
+      matching[0]
+    );
   }
 
   async function sendMessage(content: string) {
