@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { alpha } from "@mui/material/styles";
 import { Box, Stack, Typography, IconButton, Tooltip, Avatar, ButtonBase } from "@mui/material";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
@@ -62,34 +63,40 @@ export function Sidebar() {
   return (
     <Box
       component="nav"
-      sx={{
+      sx={(theme) => ({
         width: 264,
         flexShrink: 0,
         height: "100vh",
         position: "sticky",
         top: 0,
+        zIndex: 1,
         display: "flex",
         flexDirection: "column",
         borderRight: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
-      }}
+        borderColor: alpha(theme.palette.divider, theme.palette.mode === "dark" ? 0.7 : 1),
+        bgcolor: alpha(theme.palette.background.paper, theme.palette.mode === "dark" ? 0.55 : 0.65),
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+        boxShadow:
+          theme.palette.mode === "dark"
+            ? "8px 0 32px rgba(0,0,0,0.35)"
+            : "8px 0 32px rgba(17,17,17,0.06)",
+      })}
     >
-      <Box sx={{ px: 3, pt: 3.5, pb: 2, display: "flex", alignItems: "center", gap: 1.25 }}>
+      <Box sx={{ px: 3, pt: 3, pb: 2.5, display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
         <Box
           sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 2,
+            width: 150,
+            height: 150,
+            borderRadius: 0.5,
             overflow: "hidden",
             flexShrink: 0,
-            border: "1px solid",
             borderColor: "divider",
           }}
         >
-          <Image src="/PROMETHEUS-logo.png" alt="" width={100} height={100} style={{ width: "100%", height: "100%", objectFit: "cover" }} priority />
+          <Image src="/PROMETHEUS-logo.png" alt="" width={150} height={150} style={{ width: "100%", height: "100%", objectFit: "cover" }} priority />
         </Box>
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, textAlign: "center" }}>
           <Typography
             variant="h6"
             noWrap
