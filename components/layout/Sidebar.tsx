@@ -21,8 +21,11 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
+import VolumeOffOutlinedIcon from "@mui/icons-material/VolumeOffOutlined";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { useThemeStore } from "@/store/useThemeStore";
+import { useSoundStore } from "@/store/useSoundStore";
 import { useSyncStore } from "@/store/useSyncStore";
 import { useLocaleStore } from "@/store/useLocaleStore";
 import { useProfileStore } from "@/store/useProfileStore";
@@ -49,6 +52,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const mode = useThemeStore((s) => s.mode);
   const toggleMode = useThemeStore((s) => s.toggleMode);
+  const muted = useSoundStore((s) => s.muted);
+  const toggleMuted = useSoundStore((s) => s.toggleMuted);
   const syncStatus = useSyncStore((s) => s.status);
   const locale = useLocaleStore((s) => s.locale);
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
@@ -184,6 +189,17 @@ export function Sidebar() {
                 </Typography>
               </Stack>
             </Box>
+            <Tooltip title={muted ? "Unmute sounds" : "Mute sounds"}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleMuted();
+                }}
+              >
+                {muted ? <VolumeOffOutlinedIcon sx={{ fontSize: 17 }} /> : <VolumeUpOutlinedIcon sx={{ fontSize: 17 }} />}
+              </IconButton>
+            </Tooltip>
             <Tooltip title={mode === "dark" ? "Switch to light" : "Switch to dark"}>
               <IconButton
                 size="small"

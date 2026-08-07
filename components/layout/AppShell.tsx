@@ -6,11 +6,13 @@ import { PageTransition } from "./PageTransition";
 import { Footer } from "./Footer";
 import { CommandPalette } from "@/features/search/CommandPalette";
 import { DataBootstrap } from "./DataBootstrap";
+import { ClickSoundListener } from "./ClickSoundListener";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
       <DataBootstrap />
+      <ClickSoundListener />
       <Sidebar />
       <Box
         component="main"
