@@ -1,4 +1,6 @@
 import { Box, Typography, Stack } from "@mui/material";
+import { motion } from "framer-motion";
+import { HermesPlanet } from "./HermesPlanet";
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -16,7 +18,15 @@ export function PageHeader({ eyebrow, title, subtitle, action }: PageHeaderProps
       spacing={2}
       sx={{ mb: 5 }}
     >
-      <Box>
+      <Box sx={{ position: "relative" }}>
+        {/* Hermes drifts in a small orbit near the title, never fully docking */}
+        <motion.div
+          style={{ position: "absolute", top: -26, left: -10, pointerEvents: "none" }}
+          animate={{ x: [0, 12, 0, -12, 0], y: [0, -8, -14, -8, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <HermesPlanet size={24} variant="float" />
+        </motion.div>
         {eyebrow && (
           <Typography
             variant="overline"
