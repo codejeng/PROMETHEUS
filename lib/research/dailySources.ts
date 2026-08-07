@@ -79,7 +79,12 @@ export async function fetchAllNews(): Promise<{ items: NewsItem[]; errors: Parti
 export async function searchGithubRepos(keyword: string, sinceISODate: string, limit = 5): Promise<GithubProject[]> {
   const q = `${keyword} pushed:>${sinceISODate}`;
   const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=${limit}`;
-  const res = await fetchWithTimeout(url, { headers: { Accept: "application/vnd.github+json" } });
+  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
+  // Unauthenticated GitHub Search API is capped at 10 req/min, which a
+  // multi-keyword briefing burns through immediately. An optional token
+  // raises that to 30 req/min. See .env.local.example.
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const res = await fetchWithTimeout(url, { headers });
   if (!res.ok) throw new Error(`GitHub search responded ${res.status}`);
   const data = await res.json();
   const items: Array<Record<string, unknown>> = data.items ?? [];

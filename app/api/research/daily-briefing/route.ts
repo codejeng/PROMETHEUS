@@ -134,10 +134,14 @@ export async function POST(req: NextRequest) {
             }),
           fetchAllNews()
             .then((r) => {
+              if (Object.keys(r.errors).length) {
+                console.warn("[daily-briefing] news feed errors:", r.errors);
+              }
               send({ stage: "news", status: "done", count: r.items.length });
               return r;
             })
-            .catch(() => {
+            .catch((err) => {
+              console.error("[daily-briefing] fetchAllNews failed:", err);
               send({ stage: "news", status: "error" });
               return { items: [] as NewsItem[], errors: {} };
             }),
@@ -146,7 +150,8 @@ export async function POST(req: NextRequest) {
               send({ stage: "projects", status: "done", count: r.length });
               return r;
             })
-            .catch(() => {
+            .catch((err) => {
+              console.error("[daily-briefing] fetchRecentProjects failed:", err);
               send({ stage: "projects", status: "error" });
               return [] as GithubProject[];
             }),
@@ -155,9 +160,17 @@ export async function POST(req: NextRequest) {
         const recentNews = newsResult.items.filter(
           (n) => !NOISE_PATTERNS.test(n.title) && (!n.publishedDate || new Date(n.publishedDate) >= since)
         );
-        const interestQuery = [...primaryTopics, ...secondaryTopics].join(" ");
+        // Score against each interest topic individually and take the best match, rather than
+        // one combined query — a headline that strongly matches one topic (e.g. "Nuclear Fusion")
+        // would otherwise be diluted into irrelevance by the other ~30 unrelated topic terms.
+        const interestTopics = [...primaryTopics, ...secondaryTopics];
         const relevantNews = recentNews
-          .map((n) => ({ n, score: scoreRelevance(interestQuery, { title: n.title, abstract: n.snippet }) }))
+          .map((n) => ({
+            n,
+            score: Math.max(
+              ...interestTopics.map((topic) => scoreRelevance(topic, { title: n.title, abstract: n.snippet }))
+            ),
+          }))
           .filter((x) => x.score > 0.05)
           .sort((a, b) => b.score - a.score)
           .slice(0, 30)
@@ -323,11 +336,18 @@ async function fetchRecentPapers(since: Date, primaryTopics: string[]): Promise<
 
 async function fetchRecentProjects(sinceISODate: string, primaryTopics: string[]): Promise<GithubProject[]> {
   const keywords = primaryTopics.slice(0, MAX_GITHUB_KEYWORDS);
-  const settled = await Promise.allSettled(keywords.map((kw) => searchGithubRepos(kw, sinceISODate, 5)));
+  // Firing all keyword searches at once can trip GitHub's secondary rate
+  // limit even with a token, so stagger them slightly instead of a single burst.
+  const settled = await Promise.allSettled(
+    keywords.map((kw, i) => delay(i * 150).then(() => searchGithubRepos(kw, sinceISODate, 5)))
+  );
   const seen = new Set<string>();
   const out: GithubProject[] = [];
-  settled.forEach((result) => {
-    if (result.status !== "fulfilled") return;
+  settled.forEach((result, i) => {
+    if (result.status !== "fulfilled") {
+      console.warn(`[daily-briefing] GitHub search failed for keyword "${keywords[i]}":`, result.reason);
+      return;
+    }
     result.value.forEach((p) => {
       if (seen.has(p.name)) return;
       seen.add(p.name);
@@ -419,6 +439,10 @@ function describeError(err: unknown): string {
   }
   if (err instanceof Error) return err.message;
   return "Could not reach the AI provider.";
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function jsonError(error: string, status: number): Response {
